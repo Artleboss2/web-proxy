@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Web Proxy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background:#111; color:#eee; }
+  form { display:flex; gap:.5rem; margin-bottom:1rem; }
+  input { flex:1; padding:.6rem; border-radius:6px; border:1px solid #444; background:#1b1b1b; color:#eee; }
+  button { padding:.6rem 1rem; border-radius:6px; border:none; background:#4f8cff; color:#fff; cursor:pointer; }
+  iframe { width:100%; height:80vh; border:1px solid #333; border-radius:8px; background:#fff; }
+  p.note { font-size:.85rem; opacity:.7; }
+</style>
+</head>
+<body>
+  <!--
+    Cette page est statique : elle est faite pour etre servie par GitHub
+    Pages (dossier /docs de ce depot). Elle n'appelle jamais directement
+    de code serveur elle-meme : l'iframe navigue vers l'API Vercel, qui
+    fait le vrai travail de proxy et gere les cookies de session.
+  -->
+  <form id="f">
+    <input id="url" type="text" placeholder="https://exemple.com" />
+    <button type="submit">Ouvrir</button>
+  </form>
+  <iframe id="frame" title="proxy"></iframe>
+  <p class="note">
+    Sert sur un domaine distinct (Vercel) : dans certains navigateurs
+    (Safari, Chrome avec blocage des cookies tiers activé), la session
+    du site cible peut ne pas être conservée d'une page à l'autre.
+  </p>
+
+  <script>
+    // Remplace par l'URL de ton projet Vercel une fois déployé.
+    const VERCEL_API_BASE = "https://TON-PROJET.vercel.app";
+
+    const form = document.getElementById("f");
+    const input = document.getElementById("url");
+    const frame = document.getElementById("frame");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      let url = input.value.trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      frame.src = VERCEL_API_BASE + "/api/go?url=" + encodeURIComponent(url);
+    });
+  </script>
+</body>
+</html>
