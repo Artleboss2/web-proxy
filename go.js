@@ -1,16 +1,18 @@
 /**
  * Fonction serverless Vercel : /api/go?url=https://exemple.com
  *
+ * Tout est servi depuis le meme projet Vercel (frontend statique dans
+ * /public + cette fonction dans /api) : pas de domaine croise, donc le
+ * cookie de session est un cookie de premier parti, fiable dans tous les
+ * navigateurs.
+ *
  * - Sessions stockees dans Vercel KV (Redis managé), indexees par un
  *   cookie de session aleatoire `pxs` (httpOnly, secure) — jamais par IP.
  * - Rate limiting par session via KV (protection anti-abus basique).
- * - Origine autorisee restreinte via la variable d'env ALLOWED_ORIGIN
- *   (ex: https://ton-user.github.io).
  *
  * Variables d'environnement requises (a definir dans le dashboard Vercel) :
  *  - KV_REST_API_URL, KV_REST_API_TOKEN  (ajoutees automatiquement si tu
  *    crees une base "Vercel KV" depuis l'onglet Storage du projet)
- *  - ALLOWED_ORIGIN  (optionnel mais recommande en prod)
  */
 
 const axios = require("axios");
@@ -26,19 +28,6 @@ const RATE_LIMIT_MAX = 60; // requetes
 const RATE_LIMIT_WINDOW = 60; // secondes
 
 module.exports = async (req, res) => {
-  const allowedOrigin = process.env.ALLOWED_ORIGIN;
-
-  // --- Protection CORS / origine -------------------------------------
-  if (allowedOrigin) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Vary", "Origin");
-  }
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-
   const target = req.query.url;
   if (!target || Array.isArray(target) || !/^https?:\/\//i.test(target)) {
     res.status(400).send("Parametre url invalide (doit commencer par http(s)://)");
@@ -114,7 +103,7 @@ module.exports = async (req, res) => {
         cookie.serialize(SESSION_COOKIE, sessionId, {
           httpOnly: true,
           secure: true,
-          sameSite: "none", // necessaire car iframe cross-site (GitHub Pages -> Vercel)
+          sameSite: "lax", // meme domaine (frontend + API sur Vercel) : pas besoin de "none"
           maxAge: SESSION_TTL_SECONDS,
           path: "/",
         })
